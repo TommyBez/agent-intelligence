@@ -11,7 +11,7 @@ Decided in [In what form does an agent read and write a page?](https://github.co
 
 ## Consequences
 
-- No part of a body has an identifier. Whatever has to point at a part of a body, such as a comment on it, can only quote it or needs something this form does not give. Blocks would have given it, and that was given up knowingly.
+- No part of a body has an identifier set in advance. Whatever has to point at a part of a body has to bring its own: a thread does it with an anchor, a pair of marks written in the body when the thread is attached ([0006](0006-anchor-is-a-pair-of-marks-in-the-body.md)). Blocks would have given every part an identifier, and that was given up knowingly.
 - Replacing a whole body in one call is not part of the form. Text is added by replacing a passage with itself followed by the new text, and a large rewrite is a passage as large as the rewrite.
 - An agent must reproduce a passage exactly as it read it. A reference is handed out with the current title of what it points to, so in the prototype a passage that contains a reference stops matching once that thing is renamed, until the agent reads the body again.
 - The form already keeps some simultaneous edits from losing work: what others changed outside the quoted passage stays. Whether that is enough is left to [How are simultaneous edits kept from losing work?](https://github.com/TommyBez/agent-intelligence/issues/11).
