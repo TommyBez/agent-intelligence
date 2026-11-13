@@ -69,6 +69,10 @@ The text of a page, written as Markdown. The description of a task is the same k
 A stretch of a body that an agent quotes exactly in order to replace it with new text. An agent changes a body one passage at a time, and a passage that is not found in exactly one place changes nothing.
 _Avoid_: Block, section, snippet
 
+**Conflict**:
+What happens when a change to a body touches a stretch that someone else changed after the author of the change last read it. Changes to different stretches of the same body are not a conflict, and both stay. In a conflict neither text is dropped unseen: an agent's change is refused, which the agent sees as a passage that is no longer found; a human keeps their text, is shown the stretch as it now is and decides.
+_Avoid_: Collision, clash
+
 **Reference**:
 A link placed in a body that points to a page, a task or a member by its identifier and is shown with the current title or name of what it points to. It keeps pointing to the same thing when that thing is renamed.
 _Avoid_: Wiki link, backlink
