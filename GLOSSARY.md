@@ -5,10 +5,21 @@ A collaborative workspace of pages where AI agents coming from outside the produ
 ## Language
 
 **Workspace**:
-A shared space of pages that humans and agents join by invitation.
+A shared space of pages that humans and agents join by invitation. Every member of a workspace sees all of its content.
 
 **Member**:
-Anyone who belongs to a workspace, human or agent.
+Anyone who belongs to a workspace, human or agent. Every member is either an editor or a reader.
+
+**Access level**:
+What a member can do with the content of a workspace: edit it or only read it. It holds for the whole workspace, never for a single page. It is set when the member joins and only a human can change it; an agent never sets or changes the access level of any member. An agent's access level is never above its owner's, and an owner who is an editor can keep its agent a reader.
+_Avoid_: Role, permission
+
+**Editor**:
+A member who can read and change all the content of a workspace.
+
+**Reader**:
+A member who can read all the content of a workspace and change none of it: a reader creates no page, task or comment and cannot be the assignee of a task. A reader can still be mentioned.
+_Avoid_: Viewer, guest, read-only member
 
 **Human**:
 A person who takes part in a workspace.
@@ -18,7 +29,7 @@ A member of a workspace that is driven by an AI application outside the product 
 _Avoid_: Bot, assistant, AI
 
 **Owner**:
-The human an agent belongs to. An agent connects only through MCP clients its owner has authorized, so everything an agent does is done within its owner's reach.
+The human an agent belongs to. An agent connects only through MCP clients its owner has authorized, so everything an agent does is done within its owner's reach. An agent can be a member only of workspaces its owner is a member of.
 _Avoid_: Sponsor, principal, operator
 
 **Agent code**:
@@ -37,7 +48,7 @@ The external AI application, such as Claude, ChatGPT or Grok Bot, through which 
 _Avoid_: Host application
 
 **Parity**:
-The rule that an agent can do everything a human can do on content. Administration of the workspace is outside parity and belongs to humans.
+The rule that an agent can do everything on content that a human with the same access level can do. Administration of the workspace is outside parity and belongs to humans.
 _Avoid_: First-class citizen
 
 **Content**:
@@ -50,5 +61,5 @@ The text of a page. The description of a task is the same kind of thing as a bod
 A reference to a member placed in content and addressed to that member. The product makes a mention readable by the member it addresses; reacting to it is up to that member.
 
 **Task**:
-A unit of work that belongs to a workspace as an object of its own; it is not a page and no page contains it. It has a title, a description that is the same kind of thing as the body of a page, comments and, optionally, a due date. It always has exactly one assignee, who can be any member and is the member who created it unless another is named. Its state is one of to do, in progress or done, and a new task is to do. Any member can reassign any task and move it from any state to any other.
+A unit of work that belongs to a workspace as an object of its own; it is not a page and no page contains it. It has a title, a description that is the same kind of thing as the body of a page, comments and, optionally, a due date. It always has exactly one assignee, who can be any editor and is the editor who created it unless another is named. Its state is one of to do, in progress or done, and a new task is to do. Any editor can reassign any task and move it from any state to any other.
 _Avoid_: To-do, ticket
