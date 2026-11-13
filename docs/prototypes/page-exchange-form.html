@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype: how an agent reads and writes a page</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production code.
+  Ticket: "In what form does an agent read and write a page?"
+  https://github.com/TommyBez/agent-intelligence/issues/9
+  Branch taken: logic prototype (the question is about the shape of an exchange, not about a screen).
+  Open by double-click. Nothing is stored: reloading starts over.
+-->
+<style>
+  :root {
+    --bg: #f6f6f3; --card: #ffffff; --ink: #1b1b19; --muted: #6a6a64; --line: #e2e2dc;
+    --accent: #3348c4; --accent-soft: #e8ebfb;
+    --bad: #a8261f; --bad-soft: #fbebea; --good: #1d7340; --good-soft: #e6f4eb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 16px 72px; }
+  h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 2px 8px; margin-bottom: 10px; }
+  .lede { max-width: 820px; color: #33332f; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 350px minmax(0, 1fr); gap: 16px; align-items: start; }
+  .state { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+  .state .card:last-child { margin-bottom: 0; }
+  @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } .state { position: static; max-height: none; } }
+  .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .choice { text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 10px 12px; cursor: pointer; font: inherit; color: inherit; }
+  .choice b { display: block; margin-bottom: 2px; }
+  .choice span { font-size: 13px; color: var(--muted); }
+  .choice.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .choice.on span { color: #33332f; }
+  .group { margin-bottom: 14px; }
+  .group:last-child { margin-bottom: 0; }
+  .who { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  button.act { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: #fafaf8; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; margin-bottom: 6px; cursor: pointer; }
+  button.act:hover { border-color: var(--accent); }
+  button.act:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+  button.act.next { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  button.act.done { background: var(--good-soft); border-color: #bfe0cb; color: var(--good); }
+  button.link { background: none; border: none; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tab { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--card); color: inherit; border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+  .tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .outcome { border-radius: 8px; padding: 10px 12px; background: #f0f0ec; margin-bottom: 14px; }
+  .outcome div + div { margin-top: 3px; }
+  .outcome .bad { color: var(--bad); font-weight: 600; }
+  .outcome .good { color: var(--good); font-weight: 600; }
+  .xchg { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  .dir { display: flex; align-items: baseline; gap: 8px; padding: 7px 12px; background: #fafaf8; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .dir + .fields + .dir { border-top: 1px solid var(--line); }
+  .tag { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .tag.in { color: var(--ink); }
+  .size { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  code, pre { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: #f0f0ec; border-radius: 4px; padding: 1px 5px; }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; background: #f7f7f4; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; max-height: 230px; overflow: auto; }
+  dl.fields { margin: 0; padding: 10px 12px; display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 6px 10px; }
+  dl.fields dt { font: 12.5px/1.9 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+  dl.fields dt.err { color: var(--bad); font-weight: 700; }
+  dl.fields dd { margin: 0; min-width: 0; }
+  .blocks { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+  .brow { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .brow:last-child { border-bottom: none; }
+  .brow pre { border: none; background: none; padding: 0; max-height: none; }
+  .page { position: relative; max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .page .title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .blk { position: relative; padding: 3px 8px; margin: 0 -8px; border-radius: 6px; }
+  .blk.changed { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .blk.ids { padding-left: 50px; }
+  .bid { position: absolute; left: 8px; top: 6px; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .blk h4 { font-size: 15px; margin: 8px 0 2px; }
+  .blk p { margin: 4px 0; }
+  .blk ul { margin: 4px 0; padding-left: 20px; }
+  .chip { display: inline-block; border: 1px solid #c9cff3; background: var(--accent-soft); color: var(--accent); border-radius: 5px; padding: 0 6px; font-size: 13.5px; }
+  .chip small { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 4px; opacity: 0.75; }
+  .chip.broken { border-color: #eab8b4; background: var(--bad-soft); color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.on td { background: var(--accent-soft); }
+  td .bad { color: var(--bad); font-weight: 600; }
+  td .good { color: var(--good); font-weight: 600; }
+  .note { border-left: 3px solid var(--line); padding-left: 10px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="badge">Throwaway prototype</span>
+  <h1>In what form does an agent read and write a page?</h1>
+  <p class="lede">One page, one agent (Scout) and one human (Marta). Pick a form, press the buttons, and watch three things after every press: what Scout sends, what Scout receives, and what the page looks like afterwards. The three forms are kept pure so their differences show; they could be combined.</p>
+  <p class="lede muted small">Everything here is simulated in this file. No MCP client was connected and no agent was run. Sizes are characters of the call or result written as JSON. The description of a task is the same kind of thing as the body of a page, so whatever holds here holds there.</p>
+
+  <div class="card">
+    <h2>The form of the exchange</h2>
+    <div class="choices" id="forms"></div>
+    <h2 style="margin-top:16px">What a reference looks like in the body</h2>
+    <div class="choices" id="refs"></div>
+    <p class="muted small" style="margin:10px 0 0">Changing either one starts over.</p>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Free play</h2>
+        <div id="free"></div>
+        <button class="link small" data-reset="1">Start over</button>
+      </div>
+      <div class="card">
+        <h2>Guided walkthroughs</h2>
+        <div class="tabs" id="tabs"></div>
+        <div id="walk"></div>
+      </div>
+    </div>
+
+    <div class="state">
+      <div class="card">
+        <h2>What just happened</h2>
+        <div class="outcome" id="outcome"></div>
+        <div id="exchange"></div>
+      </div>
+      <div class="card">
+        <h2>The page, as a human sees it</h2>
+        <div class="page" id="page"></div>
+        <p class="muted small" style="margin:10px 0 0" id="copy"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="cmp-title"></h2>
+    <div id="cmp"></div>
+  </div>
+
+  <p class="note">Not settled by this prototype: what should happen to a change that arrives second when two members edit at once, and whether a comment attaches to a part of a body. Each has its own ticket. The collisions shown here are only what each form does with nothing added to it.</p>
+</div>
+
+<script>
+/* =====================================================================
+   PORTABLE MODULE. Pure: no DOM, no document, no handlers.
+   A simulation ("sim") is { form, state, copy, last }.
+     form  : 'whole' | 'passage' | 'blocks'
+     state : the workspace as the product holds it
+     copy  : what the agent last read (null until it reads)
+     last  : what the latest action did
+   dispatch(sim, action) returns a new sim.
+   ===================================================================== */
+const PageExchange = (() => {
+  const PAGE_ID = 'pg_07';
+  const LINK_REF = /\[([^\]]*)\]\((page|task|member):([a-z0-9_]+)\)/g;
+  const TITLE_REF = /\[\[([^\]]+)\]\]|@(\p{Lu}\p{L}+)/gu;
+
+  const chars = v => JSON.stringify(v).length;
+  const count = (hay, needle) => hay.split(needle).length - 1;
+
+  // ---------- references ----------
+  function titleOf(ws, kind, id) {
+    const t = ws[kind + 's'][id];
+    return t === undefined ? null : (kind === 'member' ? '@' + t : t);
+  }
+  function writeRef(style, ws, kind, id) {
+    const label = titleOf(ws, kind, id);
+    if (style === 'link') return `[${label}](${kind}:${id})`;
+    return kind === 'member' ? label : `[[${label}]]`;
+  }
+  // Link style: on every read the product writes the current title into the label.
+  // On write only the id counts. Title style: the text is handed out as stored.
+  function refresh(text, state) {
+    if (state.refStyle !== 'link') return text;
+    return text.replace(LINK_REF, (m, label, kind, id) => {
+      const t = titleOf(state.ws, kind, id);
+      return t === null ? m : `[${t}](${kind}:${id})`;
+    });
+  }
+  // Splits a piece of body into plain text and resolved references.
+  function segments(text, state) {
+    const out = []; let last = 0;
+    const push = (m, seg) => {
+      if (m.index > last) out.push({ text: text.slice(last, m.index) });
+      out.push(seg); last = m.index + m[0].length;
+    };
+    if (state.refStyle === 'link') {
+      for (const m of text.matchAll(LINK_REF)) {
+        const t = titleOf(state.ws, m[2], m[3]);
+        push(m, { ref: m[2], label: t === null ? m[1] : t, broken: t === null });
+      }
+    } else {
+      const has = (o, title) => Object.values(o).includes(title);
+      for (const m of text.matchAll(TITLE_REF)) {
+        if (m[1] !== undefined) {
+          const kind = has(state.ws.pages, m[1]) ? 'page' : has(state.ws.tasks, m[1]) ? 'task' : null;
+          push(m, { ref: kind || 'page', label: m[1], broken: kind === null });
+        } else if (has(state.ws.members, m[2])) {
+          push(m, { ref: 'member', label: '@' + m[2], broken: false });
+        }
+      }
+    }
+    if (last < text.length) out.push({ text: text.slice(last) });
+    return out;
+  }
+
+  // ---------- the workspace ----------
+  function initial(refStyle) {
+    const ws = {
+      pages: { pg_12: 'Launch plan' },
+      tasks: { tk_41: 'Write the announcement' },
+      members: { mb_03: 'Marta' },
+    };
+    const r = (kind, id) => writeRef(refStyle, ws, kind, id);
+    const texts = [
+      'We ship the new onboarding on 3 March. The goal is that a new member can recieve their first invitation and open a page in under two minutes.',
+      '## Timeline',
+      '- 17 February: copy ready\n- 24 February: internal test\n- 3 March: launch',
+      '## Open points',
+      `The announcement is tracked in ${r('task', 'tk_41')}. The background is in ${r('page', 'pg_12')}.`,
+      `${r('member', 'mb_03')} owns the pricing page.`,
+    ];
+    return {
+      refStyle, ws, title: 'Spring launch',
+      blocks: texts.map((text, i) => ({ id: 'b' + (i + 1), text })),
+      nextBlock: texts.length + 1,
+      humanEdits: [],
+    };
+  }
+  const bodyOf = state => state.blocks.map(b => refresh(b.text, state)).join('\n\n');
+
+  // Replaces the whole body with new Markdown, keeping the id of every block whose text did not change.
+  function replaceBody(state, body) {
+    const texts = body.split(/\n{2,}/).filter(t => t.trim() !== '');
+    const old = state.blocks.map(b => ({ id: b.id, text: refresh(b.text, state) }));
+    const n = old.length, m = texts.length;
+    const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+      L[i][j] = old[i].text === texts[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = [], changed = []; let next = state.nextBlock;
+    let gapOld = [], gapNew = [];
+    const flush = () => {
+      gapNew.forEach((t, k) => {
+        const id = k < gapOld.length ? gapOld[k].id : 'b' + (next++);
+        out.push({ id, text: t }); changed.push(id);
+      });
+      gapOld = []; gapNew = [];
+    };
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (old[i].text === texts[j]) { flush(); out.push({ id: old[i].id, text: texts[j] }); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) gapOld.push(old[i++]);
+      else gapNew.push(texts[j++]);
+    }
+    while (i < n) gapOld.push(old[i++]);
+    while (j < m) gapNew.push(texts[j++]);
+    flush();
+    return { state: { ...state, blocks: out, nextBlock: next }, changed };
+  }
+
+  // ---------- what the human does, straight in the editor ----------
+  const HUMAN = {
+    timeline: { label: 'Marta’s new date in the timeline', from: '24 February: internal test', to: '26 February: internal test' },
+    reword:   { label: 'Marta’s rewording of the first paragraph', from: 'in under two minutes', to: 'in under one minute' },
+    remove:   { label: 'Marta’s deletion of the first paragraph', gone: 'first invitation' },
+  };
+  const holds = (key, body) => HUMAN[key].gone ? !body.includes(HUMAN[key].gone) : body.includes(HUMAN[key].to);
+  function humanEdit(state, key) {
+    const h = HUMAN[key];
+    const i = state.blocks.findIndex(b => b.text.includes(h.gone || h.from));
+    if (i < 0) return { state, changed: [], done: false };
+    const blocks = h.gone
+      ? state.blocks.filter((_, k) => k !== i)
+      : state.blocks.map((b, k) => k === i ? { ...b, text: b.text.replace(h.from, h.to) } : b);
+    return {
+      state: { ...state, blocks, humanEdits: [...new Set([...state.humanEdits, key])] },
+      changed: h.gone ? [] : [state.blocks[i].id], done: true,
+    };
+  }
+
+  // ---------- what the agent does ----------
+  function read(state, form) {
+    const blocks = state.blocks.map(b => ({ id: b.id, text: refresh(b.text, state) }));
+    const call = { tool: 'read_page', args: { page: PAGE_ID } };
+    const result = form === 'blocks'
+      ? { title: state.title, blocks }
+      : { title: state.title, body: blocks.map(b => b.text).join('\n\n') };
+    return { exchange: [{ call, result }], copy: { blocks, missed: 0 } };
+  }
+
+  // What the agent wants, worked out from its own copy of the page.
+  function intentEdits(intent, copy, state) {
+    const find = s => copy.blocks.findIndex(b => b.text.includes(s));
+    const edits = [];
+    const swap = (old, neu) => { const at = find(old); if (at >= 0) edits.push({ at, old, new: neu }); };
+    if (intent === 'fixTypo') swap('can recieve their', 'can receive their');
+    if (intent === 'moveDate') { swap('onboarding on 3 March', 'onboarding on 10 March'); swap('- 3 March: launch', '- 10 March: launch'); }
+    if (intent === 'addParagraph') {
+      const r = (kind, id) => writeRef(state.refStyle, state.ws, kind, id);
+      edits.push({ append: `The draft is attached to ${r('task', 'tk_41')} and follows ${r('page', 'pg_12')}. ${r('member', 'mb_03')}, can you check the dates?` });
+    }
+    return edits;
+  }
+
+  function agentWrite(state, form, copy, intent) {
+    const edits = intentEdits(intent, copy, state);
+    if (!edits.length) return { state, copy, exchange: [], changed: [], outcome: { nothing: true } };
+    const before = state.humanEdits.filter(k => holds(k, bodyOf(state)));
+    let s = state;
+    const c = { ...copy, blocks: copy.blocks.map(b => ({ ...b })) };
+    const exchange = [], changed = [];
+    const refuse = (call, error) => exchange.push({ call, result: { error } });
+
+    if (form === 'whole') {
+      const texts = c.blocks.map(b => b.text);
+      for (const e of edits) { if ('append' in e) texts.push(e.append); else texts[e.at] = texts[e.at].replace(e.old, e.new); }
+      const body = texts.join('\n\n');
+      const r = replaceBody(s, body);
+      s = r.state; changed.push(...r.changed);
+      exchange.push({ call: { tool: 'write_page', args: { page: PAGE_ID, body } }, result: { ok: true } });
+      c.blocks = s.blocks.map(b => ({ ...b }));
+    }
+
+    if (form === 'passage') {
+      for (const e of edits) {
+        const lastText = c.blocks[c.blocks.length - 1].text;
+        const old_text = 'append' in e ? lastText : e.old;
+        const new_text = 'append' in e ? lastText + '\n\n' + e.append : e.new;
+        const call = { tool: 'edit_page', args: { page: PAGE_ID, old_text, new_text } };
+        const body = bodyOf(s);
+        const found = count(body, old_text);
+        if (found === 0) { refuse(call, 'old_text was not found in the page. Nothing was changed. Read the page again.'); continue; }
+        if (found > 1) { refuse(call, `old_text was found in ${found} places. Nothing was changed. Quote more of the surrounding text.`); continue; }
+        const r = replaceBody(s, body.replace(old_text, () => new_text));
+        s = r.state; changed.push(...r.changed);
+        exchange.push({ call, result: { ok: true } });
+        if ('append' in e) c.blocks.push({ id: null, text: e.append });
+        else c.blocks[e.at].text = c.blocks[e.at].text.replace(e.old, e.new);
+      }
+    }
+
+    if (form === 'blocks') {
+      for (const e of edits) {
+        if ('append' in e) {
+          const after = c.blocks[c.blocks.length - 1].id;
+          const call = { tool: 'insert_block', args: { page: PAGE_ID, after, text: e.append } };
+          const at = s.blocks.findIndex(b => b.id === after);
+          if (at < 0) { refuse(call, `Block ${after} is not in the page. Nothing was changed. Read the page again.`); continue; }
+          const id = 'b' + s.nextBlock;
+          s = { ...s, nextBlock: s.nextBlock + 1, blocks: [...s.blocks.slice(0, at + 1), { id, text: e.append }, ...s.blocks.slice(at + 1)] };
+          changed.push(id);
+          exchange.push({ call, result: { ok: true, block: id } });
+          c.blocks.push({ id, text: e.append });
+        } else {
+          const target = c.blocks[e.at];
+          const text = target.text.replace(e.old, e.new);
+          const call = { tool: 'update_block', args: { page: PAGE_ID, block: target.id, text } };
+          if (!s.blocks.some(b => b.id === target.id)) { refuse(call, `Block ${target.id} is not in the page. Nothing was changed. Read the page again.`); continue; }
+          s = { ...s, blocks: s.blocks.map(b => b.id === target.id ? { ...b, text } : b) };
+          changed.push(target.id);
+          exchange.push({ call, result: { ok: true } });
+          target.text = text;
+        }
+      }
+    }
+
+    const after = bodyOf(s);
+    const outcome = {
+      accepted: exchange.filter(x => !x.result.error).length,
+      refused: exchange.filter(x => x.result.error).length,
+      lost: before.filter(k => !holds(k, after)).map(k => HUMAN[k].label),
+      kept: before.filter(k => holds(k, after)).map(k => HUMAN[k].label),
+    };
+    return { state: s, copy: c, exchange, changed, outcome };
+  }
+
+  // ---------- setup ----------
+  const FILL = [
+    'The onboarding team reviewed the invitation flow with three new members and wrote down where each of them hesitated.',
+    'Most of the delay came from the confirmation step, which asks for information the member has already given.',
+    'The proposal is to remove that step and to show the first page straight away, with the invitation still visible.',
+    'Nobody objected, but support asked for a week of notice before anything changes for existing members.',
+  ];
+  function makeLong(state) {
+    if (state.blocks.some(b => b.text === '## Notes')) return state;
+    let next = state.nextBlock;
+    const extra = [{ id: 'b' + (next++), text: '## Notes' }];
+    for (let i = 1; i <= 120; i++) {
+      const text = `Note ${i}. ` + FILL.map((_, k) => FILL[(k + i) % FILL.length]).join(' ');
+      extra.push({ id: 'b' + (next++), text });
+    }
+    return { ...state, blocks: [...state.blocks, ...extra], nextBlock: next };
+  }
+
+  // ---------- the reducer ----------
+  const start = (form, refStyle) => ({ form, state: initial(refStyle), copy: null, last: { kind: 'start' } });
+
+  function dispatch(sim, action) {
+    const { form, state, copy } = sim;
+    if (action.type === 'read') {
+      const r = read(state, form);
+      return { ...sim, copy: r.copy, last: { kind: 'read', exchange: r.exchange, changed: [] } };
+    }
+    if (action.type === 'agent') {
+      if (!copy) return { ...sim, last: { kind: 'unread' } };
+      const r = agentWrite(state, form, copy, action.intent);
+      return { ...sim, state: r.state, copy: r.copy, last: { kind: 'write', exchange: r.exchange, outcome: r.outcome, changed: r.changed } };
+    }
+    if (action.type === 'human') {
+      const r = humanEdit(state, action.key);
+      return { ...sim, state: r.state, copy: copy && r.done ? { ...copy, missed: copy.missed + 1 } : copy, last: { kind: 'human', done: r.done, changed: r.changed } };
+    }
+    if (action.type === 'rename') {
+      const ws = { ...state.ws, pages: { ...state.ws.pages, pg_12: 'Go-to-market plan' } };
+      return { ...sim, state: { ...state, ws }, last: { kind: 'rename', changed: [] } };
+    }
+    if (action.type === 'long') {
+      const s = makeLong(state);
+      return { ...sim, state: s, copy: copy && s !== state ? { ...copy, missed: copy.missed + 1 } : copy, last: { kind: 'long', changed: [] } };
+    }
+    return sim;
+  }
+
+  return { start, dispatch, segments, bodyOf, chars };
+})();
+</script>
+
+<script>
+/* =====================================================================
+   THROWAWAY PAGE. A thin shell over PageExchange.
+   ===================================================================== */
+const FORMS = {
+  whole:   { name: 'A. Markdown, the whole body', text: 'Scout reads the body as Markdown text. To change anything it sends the entire body back.' },
+  passage: { name: 'B. Markdown, one passage', text: 'Scout reads the body as Markdown text. To change something it quotes the passage to replace and gives the new text. The quote must be found in exactly one place.' },
+  blocks:  { name: 'C. Blocks with ids', text: 'Scout reads the body as a list of blocks, each with an id. To change something it names a block and sends that block’s new text, or inserts a new block after another.' },
+};
+const REFS = {
+  link:  { name: 'A link that carries the id', text: '[Launch plan](page:pg_12), [Write the announcement](task:tk_41), [@Marta](member:mb_03). The product fills in the current title each time the body is read; on writing, only the id counts.' },
+  title: { name: 'The title in double brackets', text: '[[Launch plan]], [[Write the announcement]], @Marta. A reference points to whatever has that title.' },
+};
+const ACTIONS = {
+  read:     { who: 'Scout, the agent', label: 'Read the page', action: { type: 'read' } },
+  fix:      { who: 'Scout, the agent', label: 'Fix the typo in the first paragraph', action: { type: 'agent', intent: 'fixTypo' } },
+  move:     { who: 'Scout, the agent', label: 'Move the launch to 10 March (written in two places)', action: { type: 'agent', intent: 'moveDate' } },
+  add:      { who: 'Scout, the agent', label: 'Add a paragraph with two references and a mention', action: { type: 'agent', intent: 'addParagraph' } },
+  timeline: { who: 'Marta, in the editor', label: 'Change a date in the timeline', action: { type: 'human', key: 'timeline' } },
+  reword:   { who: 'Marta, in the editor', label: 'Reword the first paragraph', action: { type: 'human', key: 'reword' } },
+  remove:   { who: 'Marta, in the editor', label: 'Delete the first paragraph', action: { type: 'human', key: 'remove' } },
+  rename:   { who: 'Around the page', label: 'Rename the page “Launch plan”', action: { type: 'rename' } },
+  long:     { who: 'Around the page', label: 'Make the page long', action: { type: 'long' } },
+};
+const COLLIDE = 'What should happen to the change that arrives second is a separate decision. This shows only what the form does by itself.';
+const SCENARIOS = [
+  { name: 'A small fix', steps: ['read', 'fix'],
+    about: 'Scout reads the page and corrects one misspelt word.',
+    watch: 'How much text travels in each direction for a one-word change.' },
+  { name: 'A long page', steps: ['long', 'read', 'fix'],
+    about: 'The same one-word fix, on a page of about 50,000 characters.',
+    watch: 'What Scout has to receive and to send. Published limits on one tool result: about 150,000 characters in Claude’s chat apps and 25,000 tokens by default in Claude Code. None is published for ChatGPT or Grok Bot.' },
+  { name: 'Marta edits elsewhere', steps: ['read', 'timeline', 'fix'],
+    about: 'After Scout has read the page, Marta changes a date in the timeline. Scout then fixes the typo in the first paragraph, working from its older copy.',
+    watch: 'Whether Marta’s date is still there afterwards. ' + COLLIDE },
+  { name: 'Marta edits the same paragraph', steps: ['read', 'reword', 'fix'],
+    about: 'After Scout has read the page, Marta rewords the end of the first paragraph. Scout then fixes the typo in that same paragraph.',
+    watch: 'Whether Marta’s wording survives. ' + COLLIDE },
+  { name: 'Marta deletes the paragraph', steps: ['read', 'remove', 'fix'],
+    about: 'After Scout has read the page, Marta deletes the first paragraph. Scout then tries to fix the typo that was in it.',
+    watch: 'Whether the paragraph comes back, or Scout is told it is gone. ' + COLLIDE },
+  { name: 'A change in two places', steps: ['read', 'move'],
+    about: 'The launch date is written in the first paragraph and again in the timeline. Scout moves it to 10 March.',
+    watch: 'How many calls it takes and what each one carries.' },
+  { name: 'References and a rename', steps: ['read', 'add', 'rename', 'read'], compare: 'refs',
+    about: 'Scout adds a paragraph that points to a task and to a page and mentions Marta. The page it points to is then renamed, and Scout reads again.',
+    watch: 'What a reference looks like going in and coming out, and what the rename does to it. Try both reference styles.' },
+];
+
+let form = 'whole', refStyle = 'link', tab = 0, stepIx = 0;
+let sim = PageExchange.start(form, refStyle);
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => n.toLocaleString('en-US');
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function restart() { sim = PageExchange.start(form, refStyle); stepIx = 0; render(); }
+function run(key) { sim = PageExchange.dispatch(sim, ACTIONS[key].action); render(); }
+
+// ---------- words for what happened ----------
+function outcomeLines(last) {
+  if (last.kind === 'start') return [{ text: 'Nothing has happened yet. Scout has not read the page.' }];
+  if (last.kind === 'read') return [{ text: 'Scout read the page.' }];
+  if (last.kind === 'unread') return [{ cls: 'bad', text: 'Scout has not read the page yet, so it has nothing to work from. Press “Read the page” first.' }];
+  if (last.kind === 'human') return [{ text: last.done ? 'Marta changed the page in the editor. Scout was not told.' : 'Nothing to change: that text is no longer in the page.' }];
+  if (last.kind === 'rename') return [{ text: 'The page “Launch plan” is now called “Go-to-market plan”.' }];
+  if (last.kind === 'long') return [{ text: `The page is now ${fmt(PageExchange.bodyOf(sim.state).length)} characters long.` }];
+  return writeLines(last.outcome);
+}
+function writeLines(o) {
+  if (o.nothing) return [{ text: 'Nothing to do: in Scout’s copy that change is already made.' }];
+  const lines = [];
+  if (o.accepted) lines.push({ text: `The product accepted the change (${plural(o.accepted + o.refused, 'call')}).` });
+  if (o.refused) lines.push({ cls: 'bad', text: o.accepted ? `Refused: ${plural(o.refused, 'call')}.` : 'The product refused the change. The page is as it was.' });
+  o.lost.forEach(l => lines.push({ cls: 'bad', text: `Lost: ${l}.` }));
+  o.kept.forEach(l => lines.push({ cls: 'good', text: `Kept: ${l}.` }));
+  return lines;
+}
+const linesHtml = (lines, sep) => lines.map(l => `<${sep} class="${l.cls || ''}">${esc(l.text)}</${sep}>`).join(sep === 'span' ? ' ' : '');
+
+// ---------- the exchange ----------
+function fields(obj) {
+  return '<dl class="fields">' + Object.entries(obj).map(([k, v]) => {
+    let body;
+    if (k === 'blocks') body = '<div class="blocks">' + v.map(b => `<div class="brow"><code>${esc(b.id)}</code><pre>${esc(b.text)}</pre></div>`).join('') + '</div>';
+    else if (typeof v === 'string' && (v.length > 48 || v.includes('\n'))) body = `<pre>${esc(v)}</pre>`;
+    else body = `<code>${esc(String(v))}</code>`;
+    return `<dt class="${k === 'error' ? 'err' : ''}">${esc(k)}</dt><dd>${body}</dd>`;
+  }).join('') + '</dl>';
+}
+function exchangeHtml(ex) {
+  if (!ex || !ex.length) return '<p class="muted small" style="margin:0">Nothing passed between Scout and the product.</p>';
+  return ex.map(({ call, result }, i) => `
+    <div class="xchg">
+      <div class="dir"><span class="tag">Scout sends${ex.length > 1 ? ` (call ${i + 1} of ${ex.length})` : ''}</span><code>${esc(call.tool)}</code><span class="size">${fmt(PageExchange.chars(call.args))} characters</span></div>
+      ${fields(call.args)}
+      <div class="dir"><span class="tag in">Scout receives</span><span class="size">${fmt(PageExchange.chars(result))} characters</span></div>
+      ${fields(result)}
+    </div>`).join('');
+}
+
+// ---------- the page as a human sees it ----------
+function inline(text, state) {
+  return PageExchange.segments(text, state).map(s => s.ref
+    ? `<span class="chip ${s.broken ? 'broken' : ''}">${s.ref === 'member' ? '' : `<small>${s.ref}</small>`}${esc(s.label)}${s.broken ? ' · not found' : ''}</span>`
+    : esc(s.text)).join('');
+}
+function blockHtml(b, state, changed, showIds) {
+  const t = b.text; let inner;
+  if (t.startsWith('## ')) inner = `<h4>${inline(t.slice(3), state)}</h4>`;
+  else if (t.split('\n').every(l => l.startsWith('- '))) inner = '<ul>' + t.split('\n').map(l => `<li>${inline(l.slice(2), state)}</li>`).join('') + '</ul>';
+  else inner = `<p>${inline(t, state)}</p>`;
+  return `<div class="blk ${changed ? 'changed' : ''} ${showIds ? 'ids' : ''}">${showIds ? `<span class="bid">${esc(b.id)}</span>` : ''}${inner}</div>`;
+}
+
+// ---------- the same steps under every form / reference style ----------
+function play(f, r, steps) {
+  let s = PageExchange.start(f, r); const trail = [];
+  for (const k of steps) { s = PageExchange.dispatch(s, ACTIONS[k].action); trail.push(s.last); }
+  return { sim: s, trail };
+}
+function compareHtml(sc) {
+  if (sc.compare === 'refs') {
+    const rows = Object.keys(REFS).map(r => {
+      const { sim: end, trail } = play(form, r, sc.steps);
+      const wrote = trail.find(l => l.kind === 'write').exchange[0].call.args;
+      const sent = wrote.text || wrote.body.split('\n\n').pop();
+      const res = trail[trail.length - 1].exchange[0].result;
+      const readBack = res.blocks ? res.blocks[res.blocks.length - 1].text : res.body.split('\n\n').pop();
+      const broken = PageExchange.segments(end.state.blocks[end.state.blocks.length - 1].text, end.state).some(s => s.broken);
+      return `<tr class="${r === refStyle ? 'on' : ''}"><td><b>${esc(REFS[r].name)}</b></td><td><pre>${esc(sent)}</pre></td><td><pre>${esc(readBack)}</pre></td>
+        <td>${broken ? '<span class="bad">The reference to the page points to nothing.</span>' : '<span class="good">The reference shows the new title.</span>'}</td></tr>`;
+    }).join('');
+    return `<table><thead><tr><th>Reference style</th><th>The paragraph Scout writes</th><th>The same paragraph, read after the rename</th><th>What a human sees after the rename</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  const rows = Object.keys(FORMS).map(f => {
+    const { trail } = play(f, refStyle, sc.steps);
+    const reads = trail.filter(l => l.kind === 'read');
+    const write = trail.filter(l => l.kind === 'write').pop();
+    const received = PageExchange.chars(reads[0].exchange[0].result);
+    const sent = write.exchange.reduce((n, x) => n + PageExchange.chars(x.call.args), 0);
+    return `<tr class="${f === form ? 'on' : ''}"><td><b>${esc(FORMS[f].name)}</b></td><td class="num">${fmt(received)} characters</td>
+      <td class="num">${fmt(sent)} characters in ${plural(write.exchange.length, 'call')}</td><td>${linesHtml(writeLines(write.outcome), 'span')}</td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Form</th><th>Scout receives when it reads</th><th>Scout sends to make the change</th><th>What happens</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ---------- render ----------
+function render() {
+  $('forms').innerHTML = Object.entries(FORMS).map(([k, f]) => `<button class="choice ${k === form ? 'on' : ''}" data-form="${k}"><b>${esc(f.name)}</b><span>${esc(f.text)}</span></button>`).join('');
+  $('refs').innerHTML = Object.entries(REFS).map(([k, r]) => `<button class="choice ${k === refStyle ? 'on' : ''}" data-ref="${k}"><b>${esc(r.name)}</b><span>${esc(r.text)}</span></button>`).join('');
+
+  const groups = {};
+  Object.entries(ACTIONS).forEach(([k, a]) => (groups[a.who] = groups[a.who] || []).push(`<button class="act" data-act="${k}">${esc(a.label)}</button>`));
+  $('free').innerHTML = Object.entries(groups).map(([who, btns]) => `<div class="group"><div class="who">${esc(who)}</div>${btns.join('')}</div>`).join('');
+
+  const sc = SCENARIOS[tab];
+  $('tabs').innerHTML = SCENARIOS.map((s, i) => `<button class="tab ${i === tab ? 'on' : ''}" data-tab="${i}">${esc(s.name)}</button>`).join('');
+  $('walk').innerHTML = `<p>${esc(sc.about)}</p><p class="small muted"><b>Watch:</b> ${esc(sc.watch)}</p>`
+    + sc.steps.map((k, i) => `<button class="act ${i < stepIx ? 'done' : i === stepIx ? 'next' : ''}" data-step="${i}" ${i === stepIx ? '' : 'disabled'}>${i < stepIx ? '✓' : i + 1 + '.'} ${esc(ACTIONS[k].who.split(',')[0])}: ${esc(ACTIONS[k].label)}</button>`).join('')
+    + (stepIx >= sc.steps.length ? '<p class="small muted" style="margin:8px 0 0">Done. Pick another form above to run the same steps again, or compare all of them in the table below.</p>' : '')
+    + '<button class="link small" data-reset="1" style="margin-top:8px">Start this walkthrough again</button>';
+
+  $('outcome').innerHTML = linesHtml(outcomeLines(sim.last), 'div');
+  $('exchange').innerHTML = (sim.last.kind === 'read' || sim.last.kind === 'write') ? exchangeHtml(sim.last.exchange) : '';
+
+  const changed = new Set(sim.last.changed || []);
+  $('page').innerHTML = `<div class="title">${esc(sim.state.title)}</div>` + sim.state.blocks.map(b => blockHtml(b, sim.state, changed.has(b.id), form === 'blocks')).join('');
+  const first = $('page').querySelector('.changed');
+  $('page').scrollTop = first ? Math.max(0, first.offsetTop - 60) : 0;
+
+  const c = sim.copy;
+  $('copy').textContent = !c ? 'Scout has no copy of the page: it has not read it.'
+    : c.missed === 0 ? 'Scout’s copy of the page is current.'
+    : `Scout’s copy is out of date: the page has changed ${c.missed === 1 ? 'once' : c.missed + ' times'} since Scout read it.`;
+
+  $('cmp-title').textContent = sc.compare === 'refs' ? `“${sc.name}” under each reference style` : `“${sc.name}” under each form`;
+  $('cmp').innerHTML = compareHtml(sc);
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const d = t.dataset;
+  if (d.form) { form = d.form; restart(); }
+  else if (d.ref) { refStyle = d.ref; restart(); }
+  else if (d.tab) { tab = +d.tab; restart(); }
+  else if (d.reset) restart();
+  else if (d.step) { const k = SCENARIOS[tab].steps[+d.step]; stepIx++; run(k); }
+  else if (d.act) run(d.act);
+});
+
+render();
+</script>
+</body>
+</html>
