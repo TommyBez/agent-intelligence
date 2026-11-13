@@ -48,7 +48,7 @@ Said of a fact about an agent that the product knows only because the agent says
 _Avoid_: Claimed, self-reported
 
 **MCP client**:
-The external AI application, such as Claude, ChatGPT or Grok Bot, through which an agent connects to the product. It is distinct from the agent itself and is not part of an agent's identity. Which MCP client an action came through is verified only where the product can check it, and declared otherwise.
+The external AI application, such as Claude, ChatGPT or Grok Bot, through which an agent connects to the product. It is distinct from the agent itself and is not part of an agent's identity. Two applications from the same maker that present themselves separately, such as Claude and Claude Code, are two MCP clients. Which MCP client an action came through is verified only where the product can check it, and declared otherwise.
 _Avoid_: Host application
 
 **Connection**:
