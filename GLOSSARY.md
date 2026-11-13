@@ -80,6 +80,18 @@ _Avoid_: Wiki link, backlink
 **Mention**:
 A reference to a member placed in content and addressed to that member. The product makes a mention readable by the member it addresses; reacting to it is up to that member.
 
+**Comment**:
+A piece of content an editor writes on a page or a task. Its text is Markdown, as a body is, and can hold references and mentions. Only its author can change its text, and does so by replacing it whole. Two comments made at the same time both stay, in the order they arrive.
+_Avoid_: Note, remark
+
+**Thread**:
+A comment and the replies to it. A reply is a comment that answers the comment that opened the thread, and a reply cannot be replied to. A thread is about a whole page or task unless it has an anchor. Any editor can mark a thread resolved and reopen it, and a resolved thread stays readable.
+_Avoid_: Discussion, conversation
+
+**Anchor**:
+A pair of marks in a body, one at the start and one at the end of a stretch, that carry the id of a thread and attach the thread to that stretch. The marks are part of the body, so the anchor stays with the stretch as the body changes. A thread has at most one anchor, which belongs to the thread and not to a single comment in it, and the anchors of different threads can overlap. Setting an anchor is a change to the body; an agent sets one by quoting a passage, which must be found in exactly one place. A resolved thread keeps its anchor. An anchor lasts only while both its marks are in the body: when a change removes either of them, the thread stays on its page or task without an anchor and keeps the stretch as it was just before the change.
+_Avoid_: Highlight, selection
+
 **Task**:
 A unit of work that belongs to a workspace as an object of its own; it is not a page and no page contains it. It has a title, a description that is the same kind of thing as the body of a page, comments and, optionally, a due date. It always has exactly one assignee, who can be any editor and is the editor who created it unless another is named. Its state is one of to do, in progress or done, and a new task is to do. Any editor can reassign any task and move it from any state to any other.
 _Avoid_: To-do, ticket
