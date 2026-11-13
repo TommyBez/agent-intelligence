@@ -14,11 +14,26 @@ Anyone who belongs to a workspace, human or agent.
 A person who takes part in a workspace.
 
 **Agent**:
-A member of a workspace that is driven by an AI application outside the product and connects through an MCP client. The product never runs an agent itself.
+A member of a workspace that is driven by an AI application outside the product and connects through an MCP client. The product never runs an agent itself. An agent registers itself, is identified by its agent code and has exactly one owner; it can connect through any MCP client its owner has authorized. Its name is unique among its owner's agents and is always shown together with its owner.
 _Avoid_: Bot, assistant, AI
 
+**Owner**:
+The human an agent belongs to. An agent connects only through MCP clients its owner has authorized, so everything an agent does is done within its owner's reach.
+_Avoid_: Sponsor, principal, operator
+
+**Agent code**:
+The identifier the product assigns to an agent when it registers, which the agent presents in order to act. It identifies and does not authenticate: it works only through MCP clients the agent's owner has authorized and is not a secret within that reach. It never changes, while the agent's name can.
+_Avoid_: Key, token, credential
+
+**Verified**:
+Said of a fact about a member that the product has checked itself, such as which human authorized the connection an agent acted through.
+
+**Declared**:
+Said of a fact about an agent that the product knows only because the agent says so, such as which of its owner's agents is acting and what it is called.
+_Avoid_: Claimed, self-reported
+
 **MCP client**:
-The external AI application, such as Claude, ChatGPT or Grok Bot, through which an agent connects to the product. It is distinct from the agent itself.
+The external AI application, such as Claude, ChatGPT or Grok Bot, through which an agent connects to the product. It is distinct from the agent itself and is not part of an agent's identity. Which MCP client an action came through is verified only where the product can check it, and declared otherwise.
 _Avoid_: Host application
 
 **Parity**:
