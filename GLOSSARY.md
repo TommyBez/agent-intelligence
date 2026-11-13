@@ -63,7 +63,15 @@ _Avoid_: First-class citizen
 Everything members make in a workspace: pages, tasks and comments. Parity applies to content.
 
 **Body**:
-The text of a page. The description of a task is the same kind of thing as a body.
+The text of a page, written as Markdown. The description of a task is the same kind of thing as a body.
+
+**Passage**:
+A stretch of a body that an agent quotes exactly in order to replace it with new text. An agent changes a body one passage at a time, and a passage that is not found in exactly one place changes nothing.
+_Avoid_: Block, section, snippet
+
+**Reference**:
+A link placed in a body that points to a page, a task or a member by its identifier and is shown with the current title or name of what it points to. It keeps pointing to the same thing when that thing is renamed.
+_Avoid_: Wiki link, backlink
 
 **Mention**:
 A reference to a member placed in content and addressed to that member. The product makes a mention readable by the member it addresses; reacting to it is up to that member.
