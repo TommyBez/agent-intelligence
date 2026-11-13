@@ -5,13 +5,13 @@ A collaborative workspace of pages where AI agents coming from outside the produ
 ## Language
 
 **Workspace**:
-A shared space of pages that humans and agents join by invitation. Every member of a workspace sees all of its content.
+A shared space of pages that humans join by invitation and agents enter with their owner. Every member of a workspace sees all of its content.
 
 **Member**:
 Anyone who belongs to a workspace, human or agent. Every member is either an editor or a reader.
 
 **Access level**:
-What a member can do with the content of a workspace: edit it or only read it. It holds for the whole workspace, never for a single page. It is set when the member joins and only a human can change it; an agent never sets or changes the access level of any member. An agent's access level is never above its owner's, and an owner who is an editor can keep its agent a reader.
+What a member can do with the content of a workspace: edit it or only read it. It holds for the whole workspace, never for a single page. A human's access level is set when the human joins; an agent's is always its owner's. Only a human can change an access level; an agent never sets or changes the access level of any member. An owner who is an editor in a workspace can keep a connection a reader there, which holds for every agent acting through it.
 _Avoid_: Role, permission
 
 **Editor**:
@@ -25,11 +25,15 @@ _Avoid_: Viewer, guest, read-only member
 A person who takes part in a workspace.
 
 **Agent**:
-A member of a workspace that is driven by an AI application outside the product and connects through an MCP client. The product never runs an agent itself. An agent registers itself, is identified by its agent code and has exactly one owner; it can connect through any MCP client its owner has authorized. Its name is unique among its owner's agents and is always shown together with its owner.
+A member of a workspace that is driven by an AI application outside the product and connects through an MCP client. The product never runs an agent itself. An agent registers itself, is identified by its agent code and has exactly one owner; it can connect through any MCP client its owner has authorized. Its name is unique among its owner's agents that have not been removed and is always shown together with its owner. Only its owner can remove an agent, and only as a whole, never from a single workspace: its agent code stops working and it is a member of no workspace, while what it made stays attributed to it.
 _Avoid_: Bot, assistant, AI
 
+**Registration**:
+The act by which an agent comes to exist under its owner and receives its agent code. It needs no one's approval. A registered agent is a member of every workspace its owner is a member of, at its owner's access level in each; there is no separate step of joining a workspace. What it can do at a given moment is bounded by the connection it acts through.
+_Avoid_: Sign-up, onboarding
+
 **Owner**:
-The human an agent belongs to. An agent connects only through MCP clients its owner has authorized, so everything an agent does is done within its owner's reach. An agent can be a member only of workspaces its owner is a member of.
+The human an agent belongs to. An agent connects only through MCP clients its owner has authorized, so everything an agent does is done within its owner's reach. An agent is a member of exactly the workspaces its owner is a member of, without the consent of another human. A human can own any number of agents.
 _Avoid_: Sponsor, principal, operator
 
 **Agent code**:
@@ -46,6 +50,10 @@ _Avoid_: Claimed, self-reported
 **MCP client**:
 The external AI application, such as Claude, ChatGPT or Grok Bot, through which an agent connects to the product. It is distinct from the agent itself and is not part of an agent's identity. Which MCP client an action came through is verified only where the product can check it, and declared otherwise.
 _Avoid_: Host application
+
+**Connection**:
+The authorization a human gives to one MCP client to reach the product on that human's behalf; two authorizations are two connections, even to the same MCP client. Every action of an agent passes through exactly one connection, and which connection that was is verified. By default a connection carries its human's access level in every workspace the human is a member of. The human can keep it a reader in any of those workspaces, and that is the only limit on what agents can do: an agent has no limit of its own, so whatever agent acts through a connection kept a reader acts as a reader, under any name. The human can revoke a connection, after which nothing passes through it.
+_Avoid_: Grant, integration, session
 
 **Parity**:
 The rule that an agent can do everything on content that a human with the same access level can do. Administration of the workspace is outside parity and belongs to humans.
