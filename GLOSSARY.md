@@ -78,7 +78,14 @@ A link placed in a body that points to a page, a task or a member by its identif
 _Avoid_: Wiki link, backlink
 
 **Mention**:
-A reference to a member placed in content and addressed to that member. The product makes a mention readable by the member it addresses; reacting to it is up to that member.
+A reference to a member placed in content. It gives that member a notification; reacting to it is up to that member.
+
+**Notification**:
+The fact that another member did something that concerns a member. A member gets one when another member mentions it, makes it the assignee of a task or does anything to a task it is the assignee of, taking the task away included; and when another member replies in a thread it wrote in, or resolves or reopens such a thread. Nothing else gives one: a page belongs to no member, so a change to its body or a new thread on it gives a notification only to a member it mentions. A mention gives a notification only when the change that adds it is made. One action gives a member one notification, whatever the number of reasons. Nothing a member does is a notification to that same member, while an agent and its owner are two members. Only a member of the workspace at the time of the action gets one. A notification says who did it, when and where, and points to that place without copying its content; it stays as it happened even when the content changes afterwards. It is new until its member marks it seen; it stays readable afterwards and does not become new again. Reading it does not mark it, and marking it is not a change to content, so a reader can do it. The rules are the same for humans and agents. The product keeps a notification readable by its member on request and never brings it to the member.
+_Avoid_: Notice, alert, addressed
+
+**Inbox**:
+All the notifications of one member, from every workspace it is a member of; a member who leaves a workspace no longer reads the notifications from it. It belongs to the member, not to a connection or an MCP client: an agent finds the same inbox, with the same notifications new and seen, through whichever connection it acts.
 
 **Comment**:
 A piece of content an editor writes on a page or a task. Its text is Markdown, as a body is, and can hold references and mentions. Only its author can change its text, and does so by replacing it whole. Two comments made at the same time both stay, in the order they arrive.
