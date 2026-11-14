@@ -23,4 +23,4 @@ Decided in [What does the history record, and what can be undone?](https://githu
 - An undo gives notifications as any change does: one that puts a mention back gives its member a notification again, in the name of the member who undoes.
 - An undo that puts both marks of an anchor back brings the anchor back, unless the thread has another anchor by then.
 - How long the pause is that ends a run is not decided, and is left to the spec.
-- Whether a page, a task or a comment can be deleted is not decided. If it can, the deletion is an entry and is undone like any other, and a change that arrives for something deleted is refused as in a conflict.
+- Whether a page, a task or a comment can be deleted was not decided here; [0009](0009-deletion-destroys-nothing.md) decides that it can. The deletion is an entry and is undone like any other, and a change that arrives for something deleted is refused as in a conflict.
